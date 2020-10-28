@@ -1,0 +1,90 @@
+buildscript {
+	ext {
+		springBootVersion = '2.3.4.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+plugins {
+	id 'org.springframework.boot' version '2.3.4.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+	id 'java'
+}
+group = 'com.mystertech'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '14'
+repositories {
+	mavenCentral()
+}
+
+ext {
+	set('springCloudVersion', "Hoxton.SR8")
+}
+
+dependencies {
+	compile 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	testCompile('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+
+test {
+	useJUnitPlatform()
+}
+
+project.buildDir = './target'
+
+//Tasks
+def outputJar = "${buildDir}/libs/${rootProject.name}.jar"
+def dependsDir = "${buildDir}/libs/dependencies/"
+def runnableJar = "${rootProject.name}_fat.jar";
+//Create runnable fat jar
+task fatJar(type: Jar) {
+	clean
+	println("Creating fat jar")
+	manifest {
+		attributes 'Main-Class': 'com.mystertech.namingserver.NamingServerApplication'
+	}
+	archiveName "${runnableJar}"
+	from {
+		configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+		configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+	} with jar
+	println("Fat jar is created")
+}
+
+//Copy dependent libraries to directory.
+task copyDepends(type: Copy) {
+	from configurations.default
+	into "${dependsDir}"
+}
+
+//Create runnable jar with dependencies
+task createJar(type: Jar) {
+	println("Cleaning...")
+	clean
+	manifest {
+		attributes('Main-Class': 'com.mystertech.namingserver.NamingServerApplication',
+				'Class-Path': configurations.default.collect { 'dependencies/' +
+						it.getName() }.join(' ')
+		)
+	}
+	archiveName "${outputJar}"
+	from {
+		configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+	} with jar
+	println "${outputJar} created"
+}
+
