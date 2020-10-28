@@ -1,2 +1,0 @@
-com/mystertech/eurekaServer/EurekaServerApplication.java
- com.mystertech.eurekaServer.EurekaServerApplication
